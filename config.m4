@@ -106,7 +106,8 @@ if test "$PHP_ROCKSDB" != "no"; then
 
     rocksdb_source_file=" \
         rocksdb.cc \
-        rocksdb_exception.cc
+        rocksdb_exception.cc \
+        rocksdb_iterator.cc
     "
 
     PHP_NEW_EXTENSION(rocksdb, $rocksdb_source_file, $ext_shared,,, cxx)
