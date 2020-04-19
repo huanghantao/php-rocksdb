@@ -8,14 +8,16 @@ if (!extension_loaded('rocksdb')) {
 ?>
 --FILE--
 <?php
+require __DIR__ . '/../include/bootstrap.php';
+
+$db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
+Assert::true($db->put('key', 'value'));
+Assert::true($db->del('key'));
+
 try {
-    $db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
-    $db->put('key', 'value');
-    $db->del('key');
     $db->get('key');
 } catch (RocksDB\Exception $e) {
-    var_dump($e->getMessage());
+    Assert::eq($e->getMessage(), "NotFound: ");
 }
 ?>
 --EXPECT--
-string(10) "NotFound: "

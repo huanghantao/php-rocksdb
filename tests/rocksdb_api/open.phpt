@@ -8,9 +8,8 @@ if (!extension_loaded('rocksdb')) {
 ?>
 --FILE--
 <?php
-$db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
-var_dump($db);
+require __DIR__ . '/../include/bootstrap.php';
+
+Assert::isInstanceOf(new RocksDB('tmp', ['create_if_missing' => true], [], []), RocksDB::class);
 ?>
 --EXPECT--
-object(RocksDB)#1 (0) {
-}

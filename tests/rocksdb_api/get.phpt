@@ -8,6 +8,8 @@ if (!extension_loaded('rocksdb')) {
 ?>
 --FILE--
 <?php
+require __DIR__ . '/../include/bootstrap.php';
+
 $db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
 $db->put('key', 'value');
 $ret = $db->get('key');

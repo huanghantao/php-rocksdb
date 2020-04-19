@@ -8,6 +8,7 @@ if (!extension_loaded('rocksdb')) {
 ?>
 --FILE--
 <?php
+require __DIR__ . '/../include/bootstrap.php';
 
 ?>
 --EXPECT--
