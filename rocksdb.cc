@@ -172,8 +172,7 @@ static PHP_METHOD(rocksdb, __construct)
     }
 
     if (!s.ok()) {
-        std::string name = "RocksDB open failed msg: " + s.ToString();
-        zend_throw_exception(rocksdb_exception_ce, name.c_str(), ROCKSDB_OPEN_ERROR);
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
 
     RETURN_TRUE;
@@ -198,7 +197,7 @@ static PHP_METHOD(rocksdb, put)
 
     Status s = db->Put(*wop, std::string(key, key_len), std::string(value, value_len));
     if (!s.ok()) {
-        zend_throw_exception(rocksdb_exception_ce, "RocksDB put with read only mode", ROCKSDB_OPEN_ERROR);
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_PUT_ERROR);
     }
 
     RETURN_TRUE;
@@ -221,7 +220,7 @@ static PHP_METHOD(rocksdb, get)
     std::string value;
     Status s = db->Get(*rop, std::string(key, key_len), &value);
     if (!s.ok()) {
-        RETURN_FALSE;
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_GET_ERROR);
     }
 
     RETURN_STRINGL(value.c_str(), value.length());
@@ -243,7 +242,7 @@ static PHP_METHOD(rocksdb, del)
     
     Status s = db->Delete(*wop, std::string(key, key_len));
     if (!s.ok()) {
-        RETURN_FALSE;
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_ERROR);
     }
 
     RETURN_TRUE;
@@ -268,7 +267,7 @@ static PHP_METHOD(rocksdb, deleteRange)
 
     Status s = db->DeleteRange(*wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
     if (!s.ok()) {
-        RETURN_FALSE;
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_RANGE_ERROR);
     }
 
     RETURN_TRUE;
