@@ -17,6 +17,9 @@ extern zend_module_entry rocksdb_module_entry;
 #define ZEND_THIS (&EX(This))
 #endif
 
+extern zend_class_entry *rocksdb_exception_ce;
+extern zend_object_handlers rocksdb_exception_handlers;
+
 #define php_rocksdb_array_get_value(ht, str, v) ((v = zend_hash_str_find(ht, str, sizeof(str)-1)) && !ZVAL_IS_NULL(v))
 
 #define ROCKSDB_SET_CLASS_CREATE(module, _create_object) \

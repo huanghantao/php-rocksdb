@@ -106,6 +106,30 @@ static PHP_METHOD(rocksdb, __construct)
         Z_PARAM_STRING(secondary_path, secondary_path_len)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
+    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    vht = Z_ARRVAL_P(zreadoptions);
+    rocksdb_container_t->read_options = new ReadOptions();
+    if (php_rocksdb_array_get_value(vht, "verify_checksums", ztmp))
+    {
+        rocksdb_container_t->read_options->verify_checksums = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "fill_cache", ztmp))
+    {
+        rocksdb_container_t->read_options->fill_cache = zval_is_true(ztmp);
+    }
+
+    vht = Z_ARRVAL_P(zwriteoptions);
+    rocksdb_container_t->write_options = new WriteOptions();
+    if (php_rocksdb_array_get_value(vht, "sync", ztmp))
+    {
+        rocksdb_container_t->write_options->sync = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "disableWAL", ztmp))
+    {
+        rocksdb_container_t->write_options->disableWAL = zval_is_true(ztmp);
+    }
+
     Options options;
     options.IncreaseParallelism();
     options.OptimizeLevelStyleCompaction();
@@ -134,8 +158,6 @@ static PHP_METHOD(rocksdb, __construct)
         options.merge_operator.reset(new StringAppendOperator(delim_char[0]));
     }
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
-
     Status s;
     if (ttl > 0 && mode == 0) {
         s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl);
@@ -151,31 +173,10 @@ static PHP_METHOD(rocksdb, __construct)
 
     if (!s.ok()) {
         std::string name = "RocksDB open failed msg: " + s.ToString();
-        zend_throw_exception(rocksdb_ce, name.c_str(), ROCKSDB_OPEN_ERROR);
-        RETURN_FALSE;
+        zend_throw_exception(rocksdb_exception_ce, name.c_str(), ROCKSDB_OPEN_ERROR);
     }
 
-    vht = Z_ARRVAL_P(zwriteoptions);
-    rocksdb_container_t->write_options = new WriteOptions();
-    if (php_rocksdb_array_get_value(vht, "sync", ztmp))
-    {
-        rocksdb_container_t->write_options->sync = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "disableWAL", ztmp))
-    {
-        rocksdb_container_t->write_options->disableWAL = zval_is_true(ztmp);
-    }
-
-    vht = Z_ARRVAL_P(zreadoptions);
-    rocksdb_container_t->read_options = new ReadOptions();
-    if (php_rocksdb_array_get_value(vht, "verify_checksums", ztmp))
-    {
-        rocksdb_container_t->read_options->verify_checksums = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "fill_cache", ztmp))
-    {
-        rocksdb_container_t->read_options->fill_cache = zval_is_true(ztmp);
-    }
+    RETURN_TRUE;
 }
 
 static PHP_METHOD(rocksdb, put)
@@ -197,8 +198,7 @@ static PHP_METHOD(rocksdb, put)
 
     Status s = db->Put(*wop, std::string(key, key_len), std::string(value, value_len));
     if (!s.ok()) {
-        zend_throw_exception(rocksdb_ce, "RocksDB put with read only mode", ROCKSDB_OPEN_ERROR);
-        RETURN_FALSE;
+        zend_throw_exception(rocksdb_exception_ce, "RocksDB put with read only mode", ROCKSDB_OPEN_ERROR);
     }
 
     RETURN_TRUE;
