@@ -88,6 +88,8 @@ static inline int rocksdb_zend_register_class_alias(const char *name, size_t nam
     ROCKSDB_INIT_CLASS_ENTRY_BASE(module, namespaceName, snake_name, shortName, methods, parent_module_ce); \
     memcpy(&module##_handlers, parent_module_handlers, sizeof(zend_object_handlers))
 
+void php_rocksdb_exception_minit(int module_number);
+
 # if defined(ZTS) && defined(COMPILE_DL_ROCKSDB)
 ZEND_TSRMLS_CACHE_EXTERN()
 # endif

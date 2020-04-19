@@ -289,6 +289,8 @@ PHP_MINIT_FUNCTION(rocksdb)
     ROCKSDB_INIT_CLASS_ENTRY(rocksdb, "RocksDB", NULL, NULL, rocksdb_methods);
     ROCKSDB_SET_CLASS_CUSTOM_OBJECT(rocksdb, php_rocksdb_container_create_object, php_rocksdb_container_free_object, rocksdb_container, std);
 
+    php_rocksdb_exception_minit(module_number);
+
     return SUCCESS;
 }
 

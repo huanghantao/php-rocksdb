@@ -105,7 +105,9 @@ if test "$PHP_ROCKSDB" != "no"; then
     PHP_ADD_LIBRARY(pthread, 1, ROCKSDB_SHARED_LIBADD)
 
     rocksdb_source_file=" \
-        rocksdb.cc"
+        rocksdb.cc \
+        rocksdb_exception.cc
+    "
 
     PHP_NEW_EXTENSION(rocksdb, $rocksdb_source_file, $ext_shared,,, cxx)
 
