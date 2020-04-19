@@ -27,6 +27,8 @@ typedef struct
 zend_class_entry *rocksdb_ce;
 static zend_object_handlers rocksdb_handlers;
 
+extern void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter);
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 7)
     ZEND_ARG_INFO(0, db_name)
     ZEND_ARG_INFO(0, options)
@@ -53,6 +55,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 1)
     ZEND_ARG_INFO(0, begin_key)
     ZEND_ARG_INFO(0, end_key)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 1)
+    ZEND_ARG_INFO(0, begin_key)
 ZEND_END_ARG_INFO()
 
 static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
@@ -273,6 +279,34 @@ static PHP_METHOD(rocksdb, deleteRange)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb, newIterator)
+{
+    zval *begin_key;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ZVAL(begin_key)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    zval ziter;
+    object_init_ex(&ziter, rocksdb_iterator_ce);
+
+    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    Iterator *iter = rocksdb_container_t->db->NewIterator(*rocksdb_container_t->read_options);
+
+    php_rocksdb_iterator_set_ptr(&ziter, iter);
+
+    zend_call_method_with_1_params(
+        &ziter,
+        rocksdb_iterator_ce,
+        &rocksdb_iterator_ce->constructor,
+        (const char *) "__construct",
+        NULL,
+        begin_key
+    );
+
+    RETVAL_OBJ(Z_OBJ_P(&ziter));
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
@@ -280,6 +314,7 @@ static const zend_function_entry rocksdb_methods[] =
     PHP_ME(rocksdb, get, arginfo_rocksdb_get, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, newIterator, arginfo_rocksdb_newIterator, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 

@@ -1,5 +1,6 @@
 #include "php_rocksdb.h"
 #include "rocksdb/db.h"
+#include <iostream>
 
 using namespace rocksdb;
 
@@ -33,9 +34,14 @@ static inline rocksdb_iterator_t* php_rocksdb_iterator_fetch_object(zend_object 
     return (rocksdb_iterator_t *) ((char *) obj - rocksdb_iterator_handlers.offset);
 }
 
-static inline Iterator* php_rocksdb_iterator_get_ptr(zval *zobject)
+Iterator* php_rocksdb_iterator_get_ptr(zval *zobject)
 {
     return php_rocksdb_iterator_fetch_object(Z_OBJ_P(zobject))->iterator;
+}
+
+void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter)
+{
+    php_rocksdb_iterator_fetch_object(Z_OBJ_P(zobject))->iterator = iter;
 }
 
 static void php_rocksdb_iterator_free_object(zend_object *object)
@@ -78,22 +84,36 @@ static PHP_METHOD(rocksdb_iterator, rewind)
 
 static PHP_METHOD(rocksdb_iterator, next)
 {
+    Iterator *iter = php_rocksdb_iterator_get_ptr(ZEND_THIS);
+    iter->Next();
 }
 
 static PHP_METHOD(rocksdb_iterator, current)
 {
+    Iterator *iter = php_rocksdb_iterator_get_ptr(ZEND_THIS);
+    std::string value = iter->value().ToString();
+
+    RETURN_STRINGL(value.c_str(), value.length());
 }
 
 static PHP_METHOD(rocksdb_iterator, key)
 {
+    Iterator *iter = php_rocksdb_iterator_get_ptr(ZEND_THIS);
+    std::string key = iter->key().ToString();
+
+    RETURN_STRINGL(key.c_str(), key.length());
 }
 
 static PHP_METHOD(rocksdb_iterator, valid)
 {
+    Iterator *iter = php_rocksdb_iterator_get_ptr(ZEND_THIS);
+
+    RETURN_BOOL(iter->Valid());
 }
 
 static PHP_METHOD(rocksdb_iterator, count)
 {
+    php_error_docref(NULL, E_WARNING, "The count interface is not implemented");
 }
 
 static const zend_function_entry rocksdb_iterator_methods[] =
@@ -116,6 +136,5 @@ void php_rocksdb_iterator_minit(int module_number)
     ROCKSDB_SET_CLASS_CLONEABLE(rocksdb_iterator, rocksdb_zend_class_clone_deny);
     ROCKSDB_SET_CLASS_UNSET_PROPERTY_HANDLER(rocksdb_iterator, rocksdb_zend_class_unset_property_deny);
     ROCKSDB_SET_CLASS_CUSTOM_OBJECT(rocksdb_iterator, php_rocksdb_iterator_create_object, php_rocksdb_iterator_free_object, rocksdb_iterator_t, std);
-    zend_class_implements(rocksdb_iterator_ce, 2, zend_ce_iterator, zend_ce_arrayaccess);
-    zend_class_implements(rocksdb_iterator_ce, 1, zend_ce_countable);
+    zend_class_implements(rocksdb_iterator_ce, 1, zend_ce_iterator);
 }
