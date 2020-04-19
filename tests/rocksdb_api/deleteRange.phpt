@@ -1,5 +1,13 @@
+--TEST--
+rocksdb_api: rocksdb deleteRange
+--SKIPIF--
 <?php
-
+if (!extension_loaded('rocksdb')) {
+	echo 'skip';
+}
+?>
+--FILE--
+<?php
 $option = [
     'create_if_missing' => true,
 ];
@@ -17,3 +25,8 @@ $ret = $db->get('key2');
 var_dump($ret);
 $ret = $db->get('key3');
 var_dump($ret);
+?>
+--EXPECT--
+bool(false)
+bool(false)
+string(6) "value3"

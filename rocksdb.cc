@@ -53,6 +53,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_del, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 1)
+    ZEND_ARG_INFO(0, begin_key)
+    ZEND_ARG_INFO(0, end_key)
+ZEND_END_ARG_INFO()
+
 static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
 {
     return (rocksdb_container *) ((char *) obj - rocksdb_handlers.offset);
@@ -247,12 +252,38 @@ static PHP_METHOD(rocksdb, del)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb, deleteRange)
+{
+    char *begin_key;
+    size_t begin_key_len;
+    char *end_key;
+    size_t end_key_len;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_STRING(begin_key, begin_key_len)
+        Z_PARAM_STRING(end_key, end_key_len)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    WriteOptions *wop = rocksdb_container_t->write_options;
+    DB *db = rocksdb_container_t->db;
+
+    Status s = db->DeleteRange(*wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
+    if (!s.ok()) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, put, arginfo_rocksdb_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, get, arginfo_rocksdb_get, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
