@@ -27,8 +27,7 @@ typedef struct
     zend_object std;
 } rocksdb_container;
 
-zend_class_entry rocksdb_ce;
-zend_class_entry *rocksdb_ce_ptr;
+zend_class_entry *rocksdb_ce;
 static zend_object_handlers rocksdb_handlers;
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 7)
@@ -54,7 +53,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_del, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
 ZEND_END_ARG_INFO()
 
-static inline rocksdb_container* php_rocksdb_container_fetch_object(zend_object *obj)
+static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
 {
     return (rocksdb_container *) ((char *) obj - rocksdb_handlers.offset);
 }
@@ -150,7 +149,7 @@ static PHP_METHOD(rocksdb, __construct)
 
     if (!s.ok()) {
         std::string name = "RocksDB open failed msg: " + s.ToString();
-        zend_throw_exception(rocksdb_ce_ptr, name.c_str(), ROCKSDB_OPEN_ERROR);
+        zend_throw_exception(rocksdb_ce, name.c_str(), ROCKSDB_OPEN_ERROR);
         RETURN_FALSE;
     }
 
@@ -191,12 +190,12 @@ static PHP_METHOD(rocksdb, put)
 
     rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
 
-    WriteOptions* wop = rocksdb_container_t->write_options;
-    DB* db = rocksdb_container_t->db;
+    WriteOptions *wop = rocksdb_container_t->write_options;
+    DB *db = rocksdb_container_t->db;
 
     Status s = db->Put(*wop, std::string(key, key_len), std::string(value, value_len));
     if (!s.ok()) {
-        zend_throw_exception(rocksdb_ce_ptr, "RocksDB put with read only mode", ROCKSDB_OPEN_ERROR);
+        zend_throw_exception(rocksdb_ce, "RocksDB put with read only mode", ROCKSDB_OPEN_ERROR);
         RETURN_FALSE;
     }
 
@@ -214,8 +213,8 @@ static PHP_METHOD(rocksdb, get)
 
     rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
 
-    ReadOptions* rop = rocksdb_container_t->read_options;
-    DB* db = rocksdb_container_t->db;
+    ReadOptions *rop = rocksdb_container_t->read_options;
+    DB *db = rocksdb_container_t->db;
 
     std::string value;
     Status s = db->Get(*rop, std::string(key, key_len), &value);
@@ -237,8 +236,8 @@ static PHP_METHOD(rocksdb, del)
 
     rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
 
-    WriteOptions* wop = rocksdb_container_t->write_options;
-    DB* db = rocksdb_container_t->db;
+    WriteOptions *wop = rocksdb_container_t->write_options;
+    DB *db = rocksdb_container_t->db;
     
     Status s = db->Delete(*wop, std::string(key, key_len));
     if (!s.ok()) {
@@ -259,9 +258,7 @@ static const zend_function_entry rocksdb_methods[] =
 
 PHP_MINIT_FUNCTION(rocksdb)
 {
-    INIT_CLASS_ENTRY(rocksdb_ce, "RocksDB", rocksdb_methods);
-    rocksdb_ce_ptr = zend_register_internal_class(&rocksdb_ce TSRMLS_CC);
-    memcpy(&rocksdb_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+    ROCKSDB_INIT_CLASS_ENTRY(rocksdb, "RocksDB", NULL, NULL, rocksdb_methods);
     ROCKSDB_SET_CLASS_CUSTOM_OBJECT(rocksdb, php_rocksdb_container_create_object, php_rocksdb_container_free_object, rocksdb_container, std);
 
     return SUCCESS;
