@@ -4,9 +4,6 @@
 # include "config.h"
 #endif
 
-#include "php.h"
-#include "ext/standard/info.h"
-#include "zend_exceptions.h"
 #include "php_rocksdb.h"
 
 #include "rocksdb/db.h"

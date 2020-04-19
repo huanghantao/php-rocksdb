@@ -3,6 +3,11 @@
 #ifndef PHP_ROCKSDB_H
 # define PHP_ROCKSDB_H
 
+#include "php.h"
+#include "ext/standard/info.h"
+#include "zend_exceptions.h"
+#include "php_rocksdb.h"
+
 extern zend_module_entry rocksdb_module_entry;
 # define phpext_rocksdb_ptr &rocksdb_module_entry
 
