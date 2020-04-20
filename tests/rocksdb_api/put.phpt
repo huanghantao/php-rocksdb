@@ -10,7 +10,7 @@ if (!extension_loaded('rocksdb')) {
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
+$db = new RocksDB('tmp', ['create_if_missing' => true]);
 Assert::true($db->put('key', 'value'));
 ?>
 --EXPECT--

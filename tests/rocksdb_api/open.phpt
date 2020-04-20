@@ -10,6 +10,6 @@ if (!extension_loaded('rocksdb')) {
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-Assert::isInstanceOf(new RocksDB('tmp', ['create_if_missing' => true], [], []), RocksDB::class);
+Assert::isInstanceOf(new RocksDB('tmp', ['create_if_missing' => true]), RocksDB::class);
 ?>
 --EXPECT--
