@@ -178,19 +178,29 @@ static PHP_METHOD(rocksdb, __construct)
     }
 
     Status s;
-    if (ttl > 0 && mode == 0) {
+    if (ttl > 0 && mode == 0)
+    {
         s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl);
-    } else if (ttl > 0 && mode == 1) {
+    }
+    else if (ttl > 0 && mode == 1)
+    {
         s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl, true);
-    } else if (mode == 0) {
+    }
+    else if (mode == 0)
+    {
         s = DB::Open(options, path, &rocksdb_container_t->db);
-    } else if (mode == 2) {
+    }
+    else if (mode == 2)
+    {
         s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_container_t->db);
-    } else {
+    }
+    else
+    {
         s = DB::OpenForReadOnly(options, path, &rocksdb_container_t->db);
     }
 
-    if (!s.ok()) {
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
 }
@@ -248,7 +258,8 @@ static PHP_METHOD(rocksdb, get)
 
     std::string value;
     Status s = db->Get(rop, std::string(key, key_len), &value);
-    if (!s.ok()) {
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_GET_ERROR);
     }
 
@@ -276,7 +287,8 @@ static PHP_METHOD(rocksdb, del)
     }
 
     Status s = db->Delete(wop, std::string(key, key_len));
-    if (!s.ok()) {
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_ERROR);
     }
 
@@ -307,7 +319,8 @@ static PHP_METHOD(rocksdb, deleteRange)
     }
 
     Status s = db->DeleteRange(wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
-    if (!s.ok()) {
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_RANGE_ERROR);
     }
 
