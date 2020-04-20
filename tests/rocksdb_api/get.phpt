@@ -12,8 +12,6 @@ require __DIR__ . '/../include/bootstrap.php';
 
 $db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
 $db->put('key', 'value');
-$ret = $db->get('key');
-var_dump($ret);
+Assert::eq($db->get('key'), 'value');
 ?>
 --EXPECT--
-string(5) "value"

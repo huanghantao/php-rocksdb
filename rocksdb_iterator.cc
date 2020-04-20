@@ -69,7 +69,6 @@ static PHP_METHOD(rocksdb_iterator, __construct)
 
     Iterator *iter = php_rocksdb_iterator_get_ptr(ZEND_THIS);
     iter->Seek(std::string(begin_key, begin_key_len));
-    RETURN_TRUE;
 }
 
 static PHP_METHOD(rocksdb_iterator, __destruct)

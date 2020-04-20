@@ -180,8 +180,6 @@ static PHP_METHOD(rocksdb, __construct)
     if (!s.ok()) {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
-
-    RETURN_TRUE;
 }
 
 static PHP_METHOD(rocksdb, put)

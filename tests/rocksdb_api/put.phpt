@@ -11,8 +11,6 @@ if (!extension_loaded('rocksdb')) {
 require __DIR__ . '/../include/bootstrap.php';
 
 $db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
-$ret = $db->put('key', 'value');
-var_dump($ret);
+Assert::true($db->put('key', 'value'));
 ?>
 --EXPECT--
-bool(true)
