@@ -26,6 +26,7 @@ zend_class_entry *rocksdb_ce;
 static zend_object_handlers rocksdb_handlers;
 
 extern void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter);
+extern WriteBatch *php_rocksdb_write_batch_get_ptr(zval *zobject);
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -41,6 +42,11 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_put, 0, 0, 3)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, value)
+    ZEND_ARG_INFO(0, writeoptions)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_write, 0, 0, 2)
+    ZEND_ARG_INFO(0, batch)
     ZEND_ARG_INFO(0, writeoptions)
 ZEND_END_ARG_INFO()
 
@@ -284,6 +290,34 @@ static PHP_METHOD(rocksdb, put)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb, write)
+{
+    zval *zbatch;
+    zval *zwriteoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_OBJECT(zbatch)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    WriteBatch *batch = php_rocksdb_write_batch_get_ptr(zbatch);
+    WriteOptions wop;
+
+    if (zwriteoptions)
+    {
+        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
+
+    Status s = db->Write(wop, batch);
+    if (!s.ok()) {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_WRITE_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
 static PHP_METHOD(rocksdb, get)
 {
     char *key;
@@ -453,6 +487,7 @@ static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, put, arginfo_rocksdb_put, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, write, arginfo_rocksdb_write, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, get, arginfo_rocksdb_get, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
@@ -469,6 +504,7 @@ PHP_MINIT_FUNCTION(rocksdb)
 
     php_rocksdb_exception_minit(module_number);
     php_rocksdb_iterator_minit(module_number);
+    php_rocksdb_write_batch_minit(module_number);
 
     return SUCCESS;
 }
