@@ -28,5 +28,8 @@ try {
 } catch (RocksDB\Exception $e) {
     Assert::eq($e->getMessage(), "NotFound: ");
 }
+
+Assert::true($db->close());
+Assert::true(RocksDB::destroyDB('tmp'));
 ?>
 --EXPECT--

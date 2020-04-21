@@ -24,6 +24,9 @@ foreach ($iter as $key => $value) {
     var_dump($key);
     var_dump($value);
 }
+
+Assert::true($db->close());
+Assert::true(RocksDB::destroyDB('tmp'));
 ?>
 --EXPECT--
 string(4) "key1"
