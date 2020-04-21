@@ -27,6 +27,9 @@ static zend_object_handlers rocksdb_handlers;
 
 extern void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter);
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 5)
     ZEND_ARG_INFO(0, db_name)
     ZEND_ARG_INFO(0, options)
@@ -57,9 +60,14 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 3)
     ZEND_ARG_INFO(0, writeoptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 2)
     ZEND_ARG_INFO(0, begin_key)
     ZEND_ARG_INFO(0, readoptions)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_destroyDB, 0, 0, 2)
+    ZEND_ARG_INFO(0, db_name)
+    ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
@@ -403,6 +411,44 @@ static PHP_METHOD(rocksdb, newIterator)
     RETVAL_OBJ(Z_OBJ_P(&ziter));
 }
 
+static PHP_METHOD(rocksdb, close)
+{
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    Status s = db->Close();
+
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+    }
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb, destroyDB)
+{
+    char *path;
+    size_t path_len;
+    zval *zoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(path, path_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    Options options;
+    if (zoptions)
+    {
+        check_rocksdb_open_options(options, Z_ARRVAL_P(zoptions));
+    }
+
+    Status s = DestroyDB(path, options);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DESTROY_ERROR);
+    }
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
@@ -411,6 +457,8 @@ static const zend_function_entry rocksdb_methods[] =
     PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, newIterator, arginfo_rocksdb_newIterator, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, close, arginfo_rocksdb_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
