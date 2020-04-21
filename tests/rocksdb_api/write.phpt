@@ -1,5 +1,5 @@
 --TEST--
-rocksdb_api: rocksdb get
+rocksdb_api: rocksdb write
 --SKIPIF--
 <?php
 if (!extension_loaded('rocksdb')) {
@@ -11,8 +11,18 @@ if (!extension_loaded('rocksdb')) {
 require __DIR__ . '/../include/bootstrap.php';
 
 $db = new RocksDB('tmp', ['create_if_missing' => true]);
-$db->put('key', 'value');
-Assert::eq($db->get('key'), 'value');
+
+$batch = new RocksDB\WriteBatch();
+$batch->put('key', 'value');
+$batch->delete('key');
+
+$db->write($batch);
+
+try {
+    $db->get('key');
+} catch (RocksDB\Exception $e) {
+    Assert::eq($e->getMessage(), "NotFound: ");
+}
 
 Assert::true($db->close());
 Assert::true(RocksDB::destroyDB('tmp'));

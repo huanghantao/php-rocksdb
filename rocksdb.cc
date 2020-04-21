@@ -19,8 +19,6 @@ typedef struct
 {
     DB *db;
     DBWithTTL *db_with_ttl;
-    WriteOptions *write_options;
-    ReadOptions *read_options;
     zend_object std;
 } rocksdb_container;
 
@@ -28,37 +26,54 @@ zend_class_entry *rocksdb_ce;
 static zend_object_handlers rocksdb_handlers;
 
 extern void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter);
+extern WriteBatch *php_rocksdb_write_batch_get_ptr(zval *zobject);
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 7)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 5)
     ZEND_ARG_INFO(0, db_name)
     ZEND_ARG_INFO(0, options)
-    ZEND_ARG_INFO(0, readoptions)
-    ZEND_ARG_INFO(0, writeoptions)
     ZEND_ARG_INFO(0, mode)
     ZEND_ARG_INFO(0, ttl)
     ZEND_ARG_INFO(0, secondary_path)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_put, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_put, 0, 0, 3)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, value)
+    ZEND_ARG_INFO(0, writeoptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_get, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_write, 0, 0, 2)
+    ZEND_ARG_INFO(0, batch)
+    ZEND_ARG_INFO(0, writeoptions)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_get, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, readoptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_del, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_del, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, writeoptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 3)
     ZEND_ARG_INFO(0, begin_key)
     ZEND_ARG_INFO(0, end_key)
+    ZEND_ARG_INFO(0, writeoptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 2)
     ZEND_ARG_INFO(0, begin_key)
+    ZEND_ARG_INFO(0, readoptions)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_destroyDB, 0, 0, 2)
+    ZEND_ARG_INFO(0, db_name)
+    ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
@@ -81,6 +96,106 @@ static void php_rocksdb_container_free_object(zend_object *object)
     zend_object_std_dtor(&rocksdb_container_t->std);
 }
 
+static DB *php_rocksdb_db_get_ptr(zval *zobject)
+{
+    return php_rocksdb_container_fetch_object(Z_OBJ_P(zobject))->db;
+}
+
+static void check_rocksdb_open_options(Options &op, HashTable *vht)
+{
+    zval *ztmp;
+
+    if (php_rocksdb_array_get_value(vht, "create_if_missing", ztmp))
+    {
+        op.create_if_missing = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "error_if_exists", ztmp))
+    {
+        op.error_if_exists = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "paranoid_checks", ztmp))
+    {
+        op.paranoid_checks = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "max_open_files", ztmp))
+    {
+        op.max_open_files = zval_get_long(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "merge_operator", ztmp))
+    {
+        char *delim_char = ZSTR_VAL(zval_get_string(ztmp));
+        op.merge_operator.reset(new StringAppendOperator(delim_char[0]));
+    }
+}
+
+static void check_rocksdb_write_options(WriteOptions &wop, HashTable *vht)
+{
+    zval *ztmp;
+
+    if (php_rocksdb_array_get_value(vht, "disableWAL", ztmp))
+    {
+        wop.disableWAL = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "ignore_missing_column_families", ztmp))
+    {
+        wop.ignore_missing_column_families = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "low_pri", ztmp))
+    {
+        wop.low_pri = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "no_slowdown", ztmp))
+    {
+        wop.no_slowdown = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "sync", ztmp))
+    {
+        wop.sync = zval_is_true(ztmp);
+    }
+}
+
+static void check_rocksdb_read_options(ReadOptions &rop, HashTable *vht)
+{
+    zval *ztmp;
+
+    if (php_rocksdb_array_get_value(vht, "background_purge_on_iterator_cleanup", ztmp))
+    {
+        rop.background_purge_on_iterator_cleanup = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "fill_cache", ztmp))
+    {
+        rop.fill_cache = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "ignore_range_deletions", ztmp))
+    {
+        rop.ignore_range_deletions = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "managed", ztmp))
+    {
+        rop.managed = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "pin_data", ztmp))
+    {
+        rop.pin_data = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "prefix_same_as_start", ztmp))
+    {
+        rop.prefix_same_as_start = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "tailing", ztmp))
+    {
+        rop.tailing = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "total_order_seek", ztmp))
+    {
+        rop.total_order_seek = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "verify_checksums", ztmp))
+    {
+        rop.verify_checksums = zval_is_true(ztmp);
+    }
+}
+
 PHP_RINIT_FUNCTION(rocksdb)
 {
     return SUCCESS;
@@ -90,23 +205,16 @@ static PHP_METHOD(rocksdb, __construct)
 {
     char *path;
     size_t path_len;
-    zval *zoptions;
-    zval *zreadoptions;
-    zval *zwriteoptions;
+    zval *zoptions = nullptr;
     zend_bool mode = 0;
     zend_long ttl = 0;
     char *secondary_path;
     size_t secondary_path_len;
 
-    zval *ztmp;
-    HashTable *vht;
-
-    ZEND_PARSE_PARAMETERS_START(4, 7)
+    ZEND_PARSE_PARAMETERS_START(1, 5)
         Z_PARAM_STRING(path, path_len)
-        Z_PARAM_ARRAY(zoptions)
-        Z_PARAM_ARRAY(zreadoptions)
-        Z_PARAM_ARRAY(zwriteoptions)
         Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zoptions)
         Z_PARAM_BOOL(mode)
         Z_PARAM_LONG(ttl)
         Z_PARAM_STRING(secondary_path, secondary_path_len)
@@ -114,70 +222,39 @@ static PHP_METHOD(rocksdb, __construct)
 
     rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
 
-    vht = Z_ARRVAL_P(zreadoptions);
-    rocksdb_container_t->read_options = new ReadOptions();
-    if (php_rocksdb_array_get_value(vht, "verify_checksums", ztmp))
-    {
-        rocksdb_container_t->read_options->verify_checksums = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "fill_cache", ztmp))
-    {
-        rocksdb_container_t->read_options->fill_cache = zval_is_true(ztmp);
-    }
-
-    vht = Z_ARRVAL_P(zwriteoptions);
-    rocksdb_container_t->write_options = new WriteOptions();
-    if (php_rocksdb_array_get_value(vht, "sync", ztmp))
-    {
-        rocksdb_container_t->write_options->sync = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "disableWAL", ztmp))
-    {
-        rocksdb_container_t->write_options->disableWAL = zval_is_true(ztmp);
-    }
-
     Options options;
     options.IncreaseParallelism();
     options.OptimizeLevelStyleCompaction();
 
-    vht = Z_ARRVAL_P(zoptions);
-
-    if (php_rocksdb_array_get_value(vht, "create_if_missing", ztmp))
+    if (zoptions)
     {
-        options.create_if_missing = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "error_if_exists", ztmp))
-    {
-        options.error_if_exists = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "paranoid_checks", ztmp))
-    {
-        options.paranoid_checks = zval_is_true(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "max_open_files", ztmp))
-    {
-        options.max_open_files = zval_get_long(ztmp);
-    }
-    if (php_rocksdb_array_get_value(vht, "merge_operator", ztmp))
-    {
-        char *delim_char = ZSTR_VAL(zval_get_string(ztmp));
-        options.merge_operator.reset(new StringAppendOperator(delim_char[0]));
+        check_rocksdb_open_options(options, Z_ARRVAL_P(zoptions));
     }
 
     Status s;
-    if (ttl > 0 && mode == 0) {
+    if (ttl > 0 && mode == 0)
+    {
         s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl);
-    } else if (ttl > 0 && mode == 1) {
+    }
+    else if (ttl > 0 && mode == 1)
+    {
         s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl, true);
-    } else if (mode == 0) {
+    }
+    else if (mode == 0)
+    {
         s = DB::Open(options, path, &rocksdb_container_t->db);
-    } else if (mode == 2) {
+    }
+    else if (mode == 2)
+    {
         s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_container_t->db);
-    } else {
+    }
+    else
+    {
         s = DB::OpenForReadOnly(options, path, &rocksdb_container_t->db);
     }
 
-    if (!s.ok()) {
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
 }
@@ -188,20 +265,54 @@ static PHP_METHOD(rocksdb, put)
     size_t key_len;
     char *value;
     size_t value_len;
+    zval *zwriteoptions = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 3)
         Z_PARAM_STRING(key, key_len)
         Z_PARAM_STRING(value, value_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    WriteOptions wop;
 
-    WriteOptions *wop = rocksdb_container_t->write_options;
-    DB *db = rocksdb_container_t->db;
+    if (zwriteoptions)
+    {
+        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
 
-    Status s = db->Put(*wop, std::string(key, key_len), std::string(value, value_len));
+    Status s = db->Put(wop, std::string(key, key_len), std::string(value, value_len));
     if (!s.ok()) {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_PUT_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb, write)
+{
+    zval *zbatch;
+    zval *zwriteoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_OBJECT(zbatch)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    WriteBatch *batch = php_rocksdb_write_batch_get_ptr(zbatch);
+    WriteOptions wop;
+
+    if (zwriteoptions)
+    {
+        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
+
+    Status s = db->Write(wop, batch);
+    if (!s.ok()) {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_WRITE_ERROR);
     }
 
     RETURN_TRUE;
@@ -211,19 +322,26 @@ static PHP_METHOD(rocksdb, get)
 {
     char *key;
     size_t key_len;
+    zval *zreadoptions = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_STRING(key, key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zreadoptions)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    ReadOptions rop;
 
-    ReadOptions *rop = rocksdb_container_t->read_options;
-    DB *db = rocksdb_container_t->db;
+    if (zreadoptions)
+    {
+        check_rocksdb_read_options(rop, Z_ARRVAL_P(zreadoptions));
+    }
 
     std::string value;
-    Status s = db->Get(*rop, std::string(key, key_len), &value);
-    if (!s.ok()) {
+    Status s = db->Get(rop, std::string(key, key_len), &value);
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_GET_ERROR);
     }
 
@@ -234,18 +352,25 @@ static PHP_METHOD(rocksdb, del)
 {
     char *key;
     size_t key_len;
+    zval *zwriteoptions = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_STRING(key, key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    WriteOptions wop;
 
-    WriteOptions *wop = rocksdb_container_t->write_options;
-    DB *db = rocksdb_container_t->db;
-    
-    Status s = db->Delete(*wop, std::string(key, key_len));
-    if (!s.ok()) {
+    if (zwriteoptions)
+    {
+        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
+
+    Status s = db->Delete(wop, std::string(key, key_len));
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_ERROR);
     }
 
@@ -258,19 +383,26 @@ static PHP_METHOD(rocksdb, deleteRange)
     size_t begin_key_len;
     char *end_key;
     size_t end_key_len;
+    zval *zwriteoptions = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(2, 2)
+    ZEND_PARSE_PARAMETERS_START(2, 3)
         Z_PARAM_STRING(begin_key, begin_key_len)
         Z_PARAM_STRING(end_key, end_key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    WriteOptions wop;
 
-    WriteOptions *wop = rocksdb_container_t->write_options;
-    DB *db = rocksdb_container_t->db;
+    if (zwriteoptions)
+    {
+        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
 
-    Status s = db->DeleteRange(*wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
-    if (!s.ok()) {
+    Status s = db->DeleteRange(wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
+    if (!s.ok())
+    {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DELETE_RANGE_ERROR);
     }
 
@@ -280,17 +412,25 @@ static PHP_METHOD(rocksdb, deleteRange)
 static PHP_METHOD(rocksdb, newIterator)
 {
     zval *begin_key;
+    zval *zreadoptions = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(1, 1)
+    ZEND_PARSE_PARAMETERS_START(1, 2)
         Z_PARAM_ZVAL(begin_key)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zreadoptions)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    ReadOptions rop;
+
+    if (zreadoptions)
+    {
+        check_rocksdb_read_options(rop, Z_ARRVAL_P(zreadoptions));
+    }
 
     zval ziter;
     object_init_ex(&ziter, rocksdb_iterator_ce);
-
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
-    Iterator *iter = rocksdb_container_t->db->NewIterator(*rocksdb_container_t->read_options);
-
+    Iterator *iter = db->NewIterator(rop);
     php_rocksdb_iterator_set_ptr(&ziter, iter);
 
     zend_call_method_with_1_params(
@@ -305,14 +445,55 @@ static PHP_METHOD(rocksdb, newIterator)
     RETVAL_OBJ(Z_OBJ_P(&ziter));
 }
 
+static PHP_METHOD(rocksdb, close)
+{
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    Status s = db->Close();
+
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+    }
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb, destroyDB)
+{
+    char *path;
+    size_t path_len;
+    zval *zoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(path, path_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    Options options;
+    if (zoptions)
+    {
+        check_rocksdb_open_options(options, Z_ARRVAL_P(zoptions));
+    }
+
+    Status s = DestroyDB(path, options);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_DESTROY_ERROR);
+    }
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, put, arginfo_rocksdb_put, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, write, arginfo_rocksdb_write, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, get, arginfo_rocksdb_get, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, newIterator, arginfo_rocksdb_newIterator, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, close, arginfo_rocksdb_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
@@ -323,6 +504,7 @@ PHP_MINIT_FUNCTION(rocksdb)
 
     php_rocksdb_exception_minit(module_number);
     php_rocksdb_iterator_minit(module_number);
+    php_rocksdb_write_batch_minit(module_number);
 
     return SUCCESS;
 }

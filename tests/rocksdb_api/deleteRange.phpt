@@ -14,7 +14,7 @@ $option = [
     'create_if_missing' => true,
 ];
 
-$db = new RocksDB('tmp', $option, [], []);
+$db = new RocksDB('tmp', $option);
 Assert::true($db->put('key1', 'value1'));
 Assert::true($db->put('key2', 'value2'));
 Assert::true($db->put('key3', 'value3'));
@@ -28,5 +28,8 @@ try {
 } catch (RocksDB\Exception $e) {
     Assert::eq($e->getMessage(), "NotFound: ");
 }
+
+Assert::true($db->close());
+Assert::true(RocksDB::destroyDB('tmp'));
 ?>
 --EXPECT--

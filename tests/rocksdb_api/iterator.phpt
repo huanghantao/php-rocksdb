@@ -14,7 +14,7 @@ $option = [
     'create_if_missing' => true,
 ];
 
-$db = new RocksDB('tmp', $option, [], []);
+$db = new RocksDB('tmp', $option);
 $db->put('key1', 'value1');
 $db->put('key2', 'value2');
 $db->put('key3', 'value3');
@@ -24,6 +24,9 @@ foreach ($iter as $key => $value) {
     var_dump($key);
     var_dump($value);
 }
+
+Assert::true($db->close());
+Assert::true(RocksDB::destroyDB('tmp'));
 ?>
 --EXPECT--
 string(4) "key1"

@@ -1,5 +1,5 @@
 --TEST--
-rocksdb_api: rocksdb get
+rocksdb_api: rocksdb destroyDB
 --SKIPIF--
 <?php
 if (!extension_loaded('rocksdb')) {
@@ -11,9 +11,6 @@ if (!extension_loaded('rocksdb')) {
 require __DIR__ . '/../include/bootstrap.php';
 
 $db = new RocksDB('tmp', ['create_if_missing' => true]);
-$db->put('key', 'value');
-Assert::eq($db->get('key'), 'value');
-
 Assert::true($db->close());
 Assert::true(RocksDB::destroyDB('tmp'));
 ?>
