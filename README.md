@@ -4,51 +4,10 @@
 
 ## Example
 
-```php
-<?php
+You can find all the examples in the tests folder. For better programming, you can install the ide helper that we provide:
 
-$db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
-$db->put('key', 'value');
-$db->get('key');
-```
-
-```php
-<?php
-
-$db = new RocksDB('tmp', ['create_if_missing' => true], [], []);
-$db->put('key', 'value');
-$db->del('key');
-```
-
-```php
-<?php
-
-$option = [
-    'create_if_missing' => true,
-];
-
-$db = new RocksDB('tmp', $option, [], []);
-$db->put('key1', 'value1');
-$db->put('key2', 'value2');
-$db->put('key3', 'value3');
-$db->deleteRange('key1', 'key3');
-```
-
-```php
-<?php
-
-$option = [
-    'create_if_missing' => true,
-];
-
-$db = new RocksDB('tmp', $option, [], []);
-$db->put('key1', 'value1');
-$db->put('key2', 'value2');
-$db->put('key3', 'value3');
-
-$iter = $db->newIterator('key1');
-foreach ($iter as $key => $value) {
-}
+```bash
+composer require hantaohuang/rocksdb-ide-helper --dev
 ```
 
 ## Installation
