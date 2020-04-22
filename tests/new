@@ -35,7 +35,7 @@ if (empty($argv[1])) {
     error_filename:
     exit(
         rocksdb_color("Please enter the correct file name or path! e.g.:", ROCKSDB_COLOR_RED) .
-        rocksdb_color("\n\"./new ./rocksdb_api\"\n", ROCKSDB_COLOR_MAGENTA)
+        rocksdb_color("\n\"./new ./rocksdb_db\"\n", ROCKSDB_COLOR_MAGENTA)
     );
 }
 

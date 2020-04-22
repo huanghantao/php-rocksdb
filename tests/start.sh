@@ -22,7 +22,7 @@ if [ -z "${1}" ]; then
 else
     if [ "${1}x" = "basex" ]; then
         glob="\
-        rocksdb_api"
+        rocksdb_db"
         if [ ${#} -gt 1 ]; then
             args="${@}"
             args="${args#* }"

@@ -1,5 +1,5 @@
 --TEST--
-rocksdb_api: rocksdb deleteRange
+rocksdb_db: rocksdb deleteRange
 --SKIPIF--
 <?php
 if (!extension_loaded('rocksdb')) {
@@ -14,7 +14,7 @@ $option = [
     'create_if_missing' => true,
 ];
 
-$db = new RocksDB('tmp', $option);
+$db = new RocksDB\DB('tmp', $option);
 Assert::true($db->put('key1', 'value1'));
 Assert::true($db->put('key2', 'value2'));
 Assert::true($db->put('key3', 'value3'));
@@ -30,6 +30,6 @@ try {
 }
 
 Assert::true($db->close());
-Assert::true(RocksDB::destroyDB('tmp'));
+Assert::true(RocksDB\DB::destroyDB('tmp'));
 ?>
 --EXPECT--

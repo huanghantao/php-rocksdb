@@ -105,7 +105,7 @@ if test "$PHP_ROCKSDB" != "no"; then
     PHP_ADD_LIBRARY(pthread, 1, ROCKSDB_SHARED_LIBADD)
 
     rocksdb_source_file=" \
-        rocksdb.cc \
+        rocksdb_db.cc \
         rocksdb_exception.cc \
         rocksdb_iterator.cc \
         rocksdb_write_batch.cc

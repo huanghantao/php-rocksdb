@@ -1,5 +1,5 @@
 --TEST--
-rocksdb_api: rocksdb iterator
+rocksdb_db: rocksdb iterator
 --SKIPIF--
 <?php
 if (!extension_loaded('rocksdb')) {
@@ -14,7 +14,7 @@ $option = [
     'create_if_missing' => true,
 ];
 
-$db = new RocksDB('tmp', $option);
+$db = new RocksDB\DB('tmp', $option);
 $db->put('key1', 'value1');
 $db->put('key2', 'value2');
 $db->put('key3', 'value3');
@@ -26,7 +26,7 @@ foreach ($iter as $key => $value) {
 }
 
 Assert::true($db->close());
-Assert::true(RocksDB::destroyDB('tmp'));
+Assert::true(RocksDB\DB::destroyDB('tmp'));
 ?>
 --EXPECT--
 string(4) "key1"

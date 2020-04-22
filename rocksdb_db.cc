@@ -7,7 +7,6 @@
 #include "php_rocksdb.h"
 
 #include "rocksdb/db.h"
-#include "rocksdb/utilities/db_ttl.h"
 #include "rocksdb/merge_operator.h"
 
 #include "stringappend.h"
@@ -18,90 +17,88 @@ using namespace rocksdb;
 typedef struct
 {
     DB *db;
-    DBWithTTL *db_with_ttl;
     zend_object std;
-} rocksdb_container;
+} rocksdb_db_t;
 
-zend_class_entry *rocksdb_ce;
-static zend_object_handlers rocksdb_handlers;
+zend_class_entry *rocksdb_db_ce;
+static zend_object_handlers rocksdb_db_handlers;
 
 extern void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter);
 extern WriteBatch *php_rocksdb_write_batch_get_ptr(zval *zobject);
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_void, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb__construct, 0, 0, 5)
-    ZEND_ARG_INFO(0, db_name)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db__construct, 0, 0, 4)
+    ZEND_ARG_INFO(0, dbName)
     ZEND_ARG_INFO(0, options)
     ZEND_ARG_INFO(0, mode)
-    ZEND_ARG_INFO(0, ttl)
-    ZEND_ARG_INFO(0, secondary_path)
+    ZEND_ARG_INFO(0, secondaryPath)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_put, 0, 0, 3)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_put, 0, 0, 3)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, value)
-    ZEND_ARG_INFO(0, writeoptions)
+    ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_write, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_write, 0, 0, 2)
     ZEND_ARG_INFO(0, batch)
-    ZEND_ARG_INFO(0, writeoptions)
+    ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_get, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_get, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
-    ZEND_ARG_INFO(0, readoptions)
+    ZEND_ARG_INFO(0, readOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_del, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_del, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
-    ZEND_ARG_INFO(0, writeoptions)
+    ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_deleteRange, 0, 0, 3)
-    ZEND_ARG_INFO(0, begin_key)
-    ZEND_ARG_INFO(0, end_key)
-    ZEND_ARG_INFO(0, writeoptions)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_deleteRange, 0, 0, 3)
+    ZEND_ARG_INFO(0, beginKey)
+    ZEND_ARG_INFO(0, endKey)
+    ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_newIterator, 0, 0, 2)
-    ZEND_ARG_INFO(0, begin_key)
-    ZEND_ARG_INFO(0, readoptions)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_newIterator, 0, 0, 2)
+    ZEND_ARG_INFO(0, beginKey)
+    ZEND_ARG_INFO(0, readOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_destroyDB, 0, 0, 2)
-    ZEND_ARG_INFO(0, db_name)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_destroyDB, 0, 0, 2)
+    ZEND_ARG_INFO(0, dbName)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
-static inline rocksdb_container *php_rocksdb_container_fetch_object(zend_object *obj)
+static inline rocksdb_db_t *php_rocksdb_db_fetch_object(zend_object *obj)
 {
-    return (rocksdb_container *) ((char *) obj - rocksdb_handlers.offset);
+    return (rocksdb_db_t *) ((char *) obj - rocksdb_db_handlers.offset);
 }
 
-static zend_object *php_rocksdb_container_create_object(zend_class_entry *ce)
+static zend_object *php_rocksdb_db_create_object(zend_class_entry *ce)
 {
-    rocksdb_container *rocksdb_container_t = (rocksdb_container *) ecalloc(1, sizeof(rocksdb_container) + zend_object_properties_size(ce));
-    zend_object_std_init(&rocksdb_container_t->std, ce);
-    object_properties_init(&rocksdb_container_t->std, ce);
-    rocksdb_container_t->std.handlers = &rocksdb_handlers;
-    return &rocksdb_container_t->std;
+    rocksdb_db_t *rocksdb_db = (rocksdb_db_t *) ecalloc(1, sizeof(rocksdb_db_t) + zend_object_properties_size(ce));
+    zend_object_std_init(&rocksdb_db->std, ce);
+    object_properties_init(&rocksdb_db->std, ce);
+    rocksdb_db->std.handlers = &rocksdb_db_handlers;
+    return &rocksdb_db->std;
 }
 
-static void php_rocksdb_container_free_object(zend_object *object)
+static void php_rocksdb_db_free_object(zend_object *object)
 {
-    rocksdb_container *rocksdb_container_t = (rocksdb_container *) php_rocksdb_container_fetch_object(object);
-    zend_object_std_dtor(&rocksdb_container_t->std);
+    rocksdb_db_t *rocksdb_db = (rocksdb_db_t *) php_rocksdb_db_fetch_object(object);
+    zend_object_std_dtor(&rocksdb_db->std);
 }
 
 static DB *php_rocksdb_db_get_ptr(zval *zobject)
 {
-    return php_rocksdb_container_fetch_object(Z_OBJ_P(zobject))->db;
+    return php_rocksdb_db_fetch_object(Z_OBJ_P(zobject))->db;
 }
 
-static void check_rocksdb_open_options(Options &op, HashTable *vht)
+static void check_rocksdb_db_open_options(Options &op, HashTable *vht)
 {
     zval *ztmp;
 
@@ -128,7 +125,7 @@ static void check_rocksdb_open_options(Options &op, HashTable *vht)
     }
 }
 
-static void check_rocksdb_write_options(WriteOptions &wop, HashTable *vht)
+static void check_rocksdb_db_write_options(WriteOptions &wop, HashTable *vht)
 {
     zval *ztmp;
 
@@ -154,7 +151,7 @@ static void check_rocksdb_write_options(WriteOptions &wop, HashTable *vht)
     }
 }
 
-static void check_rocksdb_read_options(ReadOptions &rop, HashTable *vht)
+static void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht)
 {
     zval *ztmp;
 
@@ -207,20 +204,18 @@ static PHP_METHOD(rocksdb, __construct)
     size_t path_len;
     zval *zoptions = nullptr;
     zend_bool mode = 0;
-    zend_long ttl = 0;
     char *secondary_path;
     size_t secondary_path_len;
 
-    ZEND_PARSE_PARAMETERS_START(1, 5)
+    ZEND_PARSE_PARAMETERS_START(1, 4)
         Z_PARAM_STRING(path, path_len)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(zoptions)
         Z_PARAM_BOOL(mode)
-        Z_PARAM_LONG(ttl)
         Z_PARAM_STRING(secondary_path, secondary_path_len)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
-    rocksdb_container *rocksdb_container_t = php_rocksdb_container_fetch_object(Z_OBJ_P(ZEND_THIS));
+    rocksdb_db_t *rocksdb_db = php_rocksdb_db_fetch_object(Z_OBJ_P(ZEND_THIS));
 
     Options options;
     options.IncreaseParallelism();
@@ -228,29 +223,21 @@ static PHP_METHOD(rocksdb, __construct)
 
     if (zoptions)
     {
-        check_rocksdb_open_options(options, Z_ARRVAL_P(zoptions));
+        check_rocksdb_db_open_options(options, Z_ARRVAL_P(zoptions));
     }
 
     Status s;
-    if (ttl > 0 && mode == 0)
+    if (mode == 0)
     {
-        s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl);
+        s = DB::Open(options, path, &rocksdb_db->db);
     }
-    else if (ttl > 0 && mode == 1)
+    else if (mode == 1)
     {
-        s = DBWithTTL::Open(options, path, &rocksdb_container_t->db_with_ttl, ttl, true);
-    }
-    else if (mode == 0)
-    {
-        s = DB::Open(options, path, &rocksdb_container_t->db);
-    }
-    else if (mode == 2)
-    {
-        s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_container_t->db);
+        s = DB::OpenForReadOnly(options, path, &rocksdb_db->db);
     }
     else
     {
-        s = DB::OpenForReadOnly(options, path, &rocksdb_container_t->db);
+        s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_db->db);
     }
 
     if (!s.ok())
@@ -279,7 +266,7 @@ static PHP_METHOD(rocksdb, put)
 
     if (zwriteoptions)
     {
-        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
     }
 
     Status s = db->Put(wop, std::string(key, key_len), std::string(value, value_len));
@@ -307,7 +294,7 @@ static PHP_METHOD(rocksdb, write)
 
     if (zwriteoptions)
     {
-        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
     }
 
     Status s = db->Write(wop, batch);
@@ -335,7 +322,7 @@ static PHP_METHOD(rocksdb, get)
 
     if (zreadoptions)
     {
-        check_rocksdb_read_options(rop, Z_ARRVAL_P(zreadoptions));
+        check_rocksdb_db_read_options(rop, Z_ARRVAL_P(zreadoptions));
     }
 
     std::string value;
@@ -365,7 +352,7 @@ static PHP_METHOD(rocksdb, del)
 
     if (zwriteoptions)
     {
-        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
     }
 
     Status s = db->Delete(wop, std::string(key, key_len));
@@ -397,7 +384,7 @@ static PHP_METHOD(rocksdb, deleteRange)
 
     if (zwriteoptions)
     {
-        check_rocksdb_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
     }
 
     Status s = db->DeleteRange(wop, 0, std::string(begin_key, begin_key_len), std::string(end_key, end_key_len));
@@ -425,7 +412,7 @@ static PHP_METHOD(rocksdb, newIterator)
 
     if (zreadoptions)
     {
-        check_rocksdb_read_options(rop, Z_ARRVAL_P(zreadoptions));
+        check_rocksdb_db_read_options(rop, Z_ARRVAL_P(zreadoptions));
     }
 
     zval ziter;
@@ -472,7 +459,7 @@ static PHP_METHOD(rocksdb, destroyDB)
     Options options;
     if (zoptions)
     {
-        check_rocksdb_open_options(options, Z_ARRVAL_P(zoptions));
+        check_rocksdb_db_open_options(options, Z_ARRVAL_P(zoptions));
     }
 
     Status s = DestroyDB(path, options);
@@ -485,22 +472,22 @@ static PHP_METHOD(rocksdb, destroyDB)
 
 static const zend_function_entry rocksdb_methods[] =
 {
-    PHP_ME(rocksdb, __construct, arginfo_rocksdb__construct, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, put, arginfo_rocksdb_put, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, write, arginfo_rocksdb_write, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, get, arginfo_rocksdb_get, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, del, arginfo_rocksdb_del, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_deleteRange, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, newIterator, arginfo_rocksdb_newIterator, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, close, arginfo_rocksdb_void, ZEND_ACC_PUBLIC)
-    PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(rocksdb, __construct, arginfo_rocksdb_db__construct, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, put, arginfo_rocksdb_db_put, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, write, arginfo_rocksdb_db_write, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, get, arginfo_rocksdb_db_get, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, del, arginfo_rocksdb_db_del, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, deleteRange, arginfo_rocksdb_db_deleteRange, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, newIterator, arginfo_rocksdb_db_newIterator, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, close, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_db_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_FE_END
 };
 
 PHP_MINIT_FUNCTION(rocksdb)
 {
-    ROCKSDB_INIT_CLASS_ENTRY(rocksdb, "RocksDB", NULL, NULL, rocksdb_methods);
-    ROCKSDB_SET_CLASS_CUSTOM_OBJECT(rocksdb, php_rocksdb_container_create_object, php_rocksdb_container_free_object, rocksdb_container, std);
+    ROCKSDB_INIT_CLASS_ENTRY(rocksdb_db, "RocksDB\\DB", NULL, NULL, rocksdb_methods);
+    ROCKSDB_SET_CLASS_CUSTOM_OBJECT(rocksdb_db, php_rocksdb_db_create_object, php_rocksdb_db_free_object, rocksdb_db_t, std);
 
     php_rocksdb_exception_minit(module_number);
     php_rocksdb_iterator_minit(module_number);
