@@ -98,7 +98,7 @@ static DB *php_rocksdb_db_get_ptr(zval *zobject)
     return php_rocksdb_db_fetch_object(Z_OBJ_P(zobject))->db;
 }
 
-static void check_rocksdb_db_open_options(Options &op, HashTable *vht)
+static void check_rocksdb_db_options(Options &op, HashTable *vht)
 {
     zval *ztmp;
 
@@ -223,7 +223,7 @@ static PHP_METHOD(rocksdb, __construct)
 
     if (zoptions)
     {
-        check_rocksdb_db_open_options(options, Z_ARRVAL_P(zoptions));
+        check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
     Status s;
@@ -459,7 +459,7 @@ static PHP_METHOD(rocksdb, destroyDB)
     Options options;
     if (zoptions)
     {
-        check_rocksdb_db_open_options(options, Z_ARRVAL_P(zoptions));
+        check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
     Status s = DestroyDB(path, options);
