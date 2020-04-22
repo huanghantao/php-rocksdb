@@ -34,7 +34,7 @@ Run `./clean` to remove all of the tests log files.
 
 Run `./new [test-script-filename]`
 
-E.g. : `./new ./rocksdb_api/test.phpt`
+E.g. : `./new ./rocksdb_db/test.phpt`
 
 It will generate the test script file and auto open on your ide (MacOS only).
 
