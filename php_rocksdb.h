@@ -17,6 +17,7 @@ void php_rocksdb_exception_minit(int module_number);
 void php_rocksdb_iterator_minit(int module_number);
 void php_rocksdb_write_batch_minit(int module_number);
 void php_rocksdb_transaction_db_minit(int module_number);
+void php_rocksdb_transaction_minit(int module_number);
 
 #ifndef ZEND_THIS
 #define ZEND_THIS (&EX(This))
@@ -27,6 +28,8 @@ extern zend_object_handlers rocksdb_exception_handlers;
 
 extern zend_class_entry *rocksdb_iterator_ce;
 extern zend_object_handlers rocksdb_iterator_handlers;
+
+extern zend_class_entry *rocksdb_transaction_ce;
 
 #define php_rocksdb_array_get_value(ht, str, v) ((v = zend_hash_str_find(ht, str, sizeof(str)-1)) && !ZVAL_IS_NULL(v))
 

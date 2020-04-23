@@ -25,6 +25,8 @@ typedef struct
 zend_class_entry *rocksdb_transaction_db_ce;
 static zend_object_handlers rocksdb_transaction_db_handlers;
 
+extern void php_rocksdb_transaction_set_ptr(zval *zobject, Transaction *db);
+
 extern void check_rocksdb_db_options(Options &op, HashTable *vht);
 extern void check_rocksdb_db_write_options(WriteOptions &wop, HashTable *vht);
 extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
@@ -34,6 +36,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db__construct, 0, 0, 3)
     ZEND_ARG_INFO(0, dbName)
     ZEND_ARG_INFO(0, options)
     ZEND_ARG_INFO(0, txnDBOptions)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_beginTransaction, 0, 0, 1)
+    ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
 static inline rocksdb_transaction_db_t *php_rocksdb_transaction_db_fetch_object(zend_object *obj)
@@ -99,9 +105,36 @@ static PHP_METHOD(rocksdb_transaction_db, __construct)
     }
 }
 
+static PHP_METHOD(rocksdb_transaction_db, beginTransaction)
+{
+    zval *zwriteoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(0, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    TransactionDB *txn_db = php_rocksdb_transaction_db_get_ptr(ZEND_THIS);
+    WriteOptions wop;
+
+    if (zwriteoptions)
+    {
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
+
+    Transaction *txn = txn_db->BeginTransaction(wop);
+
+    zval ztransaction;
+    object_init_ex(&ztransaction, rocksdb_transaction_ce);
+    php_rocksdb_transaction_set_ptr(&ztransaction, txn);
+
+    RETVAL_OBJ(Z_OBJ_P(&ztransaction));
+}
+
 static const zend_function_entry rocksdb_transaction_db_methods[] =
 {
     PHP_ME(rocksdb_transaction_db, __construct,  arginfo_rocksdb_transaction_db__construct, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction_db, beginTransaction,  arginfo_rocksdb_transaction_db_beginTransaction, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
