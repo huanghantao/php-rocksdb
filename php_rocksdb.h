@@ -16,6 +16,7 @@ extern zend_module_entry rocksdb_module_entry;
 void php_rocksdb_exception_minit(int module_number);
 void php_rocksdb_iterator_minit(int module_number);
 void php_rocksdb_write_batch_minit(int module_number);
+void php_rocksdb_transaction_db_minit(int module_number);
 
 #ifndef ZEND_THIS
 #define ZEND_THIS (&EX(This))
