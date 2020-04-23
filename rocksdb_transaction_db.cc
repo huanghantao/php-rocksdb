@@ -42,6 +42,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_beginTransaction, 0, 0, 1)
     ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_get, 0, 0, 2)
+    ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, readOptions)
+ZEND_END_ARG_INFO()
+
 static inline rocksdb_transaction_db_t *php_rocksdb_transaction_db_fetch_object(zend_object *obj)
 {
     return (rocksdb_transaction_db_t *) ((char *) obj - rocksdb_transaction_db_handlers.offset);
@@ -131,10 +136,41 @@ static PHP_METHOD(rocksdb_transaction_db, beginTransaction)
     RETVAL_OBJ(Z_OBJ_P(&ztransaction));
 }
 
+static PHP_METHOD(rocksdb_transaction_db, get)
+{
+    char *key;
+    size_t key_len;
+    zval *zreadoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(key, key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zreadoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    TransactionDB *txn_db = php_rocksdb_transaction_db_get_ptr(ZEND_THIS);
+    ReadOptions rop;
+
+    if (zreadoptions)
+    {
+        check_rocksdb_db_read_options(rop, Z_ARRVAL_P(zreadoptions));
+    }
+
+    std::string value;
+    Status s = txn_db->Get(rop, std::string(key, key_len), &value);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_GET_ERROR);
+    }
+
+    RETURN_STRINGL(value.c_str(), value.length());
+}
+
 static const zend_function_entry rocksdb_transaction_db_methods[] =
 {
     PHP_ME(rocksdb_transaction_db, __construct,  arginfo_rocksdb_transaction_db__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, beginTransaction,  arginfo_rocksdb_transaction_db_beginTransaction, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction_db, get,  arginfo_rocksdb_transaction_db_get, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
