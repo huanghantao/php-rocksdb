@@ -27,6 +27,9 @@ static zend_object_handlers rocksdb_transaction_handlers;
 
 extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_put, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, value)
@@ -119,10 +122,23 @@ static PHP_METHOD(rocksdb_transaction, get)
     RETURN_STRINGL(value.c_str(), value.length());
 }
 
+static PHP_METHOD(rocksdb_transaction, commit)
+{
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+
+    Status s = transaction->Commit();
+    if (!s.ok()) {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_COMMIT_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_transaction_methods[] =
 {
     PHP_ME(rocksdb_transaction, put, arginfo_rocksdb_transaction_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction, get, arginfo_rocksdb_transaction_get, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction, commit, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
