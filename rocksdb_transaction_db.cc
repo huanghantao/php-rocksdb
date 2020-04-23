@@ -42,6 +42,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_beginTransaction, 0, 0, 1)
     ZEND_ARG_INFO(0, writeOptions)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_put, 0, 0, 3)
+    ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, value)
+    ZEND_ARG_INFO(0, writeOptions)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_get, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, readOptions)
@@ -136,6 +142,37 @@ static PHP_METHOD(rocksdb_transaction_db, beginTransaction)
     RETVAL_OBJ(Z_OBJ_P(&ztransaction));
 }
 
+static PHP_METHOD(rocksdb_transaction_db, put)
+{
+    char *key;
+    size_t key_len;
+    char *value;
+    size_t value_len;
+    zval *zwriteoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(2, 3)
+        Z_PARAM_STRING(key, key_len)
+        Z_PARAM_STRING(value, value_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zwriteoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    TransactionDB *db = php_rocksdb_transaction_db_get_ptr(ZEND_THIS);
+    WriteOptions wop;
+
+    if (zwriteoptions)
+    {
+        check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
+    }
+
+    Status s = db->Put(wop, std::string(key, key_len), std::string(value, value_len));
+    if (!s.ok()) {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_PUT_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
 static PHP_METHOD(rocksdb_transaction_db, get)
 {
     char *key;
@@ -170,6 +207,7 @@ static const zend_function_entry rocksdb_transaction_db_methods[] =
 {
     PHP_ME(rocksdb_transaction_db, __construct,  arginfo_rocksdb_transaction_db__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, beginTransaction,  arginfo_rocksdb_transaction_db_beginTransaction, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction_db, put,  arginfo_rocksdb_transaction_db_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, get,  arginfo_rocksdb_transaction_db_get, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
