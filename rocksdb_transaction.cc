@@ -25,6 +25,18 @@ typedef struct
 zend_class_entry *rocksdb_transaction_ce;
 static zend_object_handlers rocksdb_transaction_handlers;
 
+extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_put, 0, 0, 2)
+    ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_get, 0, 0, 2)
+    ZEND_ARG_INFO(0, key)
+    ZEND_ARG_INFO(0, readOptions)
+ZEND_END_ARG_INFO()
+
 static inline rocksdb_transaction_t *php_rocksdb_transaction_fetch_object(zend_object *obj)
 {
     return (rocksdb_transaction_t *) ((char *) obj - rocksdb_transaction_handlers.offset);
@@ -55,8 +67,62 @@ void php_rocksdb_transaction_set_ptr(zval *zobject, Transaction *db)
     php_rocksdb_transaction_fetch_object(Z_OBJ_P(zobject))->db = db;
 }
 
+static PHP_METHOD(rocksdb_transaction, put)
+{
+    char *key;
+    size_t key_len;
+    char *value;
+    size_t value_len;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_STRING(key, key_len)
+        Z_PARAM_STRING(value, value_len)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+
+    Status s = transaction->Put(std::string(key, key_len), std::string(value, value_len));
+    if (!s.ok()) {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_PUT_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb_transaction, get)
+{
+    char *key;
+    size_t key_len;
+    zval *zreadoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(key, key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zreadoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+    ReadOptions rop;
+
+    if (zreadoptions)
+    {
+        check_rocksdb_db_read_options(rop, Z_ARRVAL_P(zreadoptions));
+    }
+
+    std::string value;
+    Status s = transaction->Get(rop, std::string(key, key_len), &value);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_GET_ERROR);
+    }
+
+    RETURN_STRINGL(value.c_str(), value.length());
+}
+
 static const zend_function_entry rocksdb_transaction_methods[] =
 {
+    PHP_ME(rocksdb_transaction, put, arginfo_rocksdb_transaction_put, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction, get, arginfo_rocksdb_transaction_get, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
