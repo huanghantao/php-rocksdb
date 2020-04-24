@@ -9,6 +9,8 @@
 
 using namespace rocksdb;
 
+extern Snapshot *php_rocksdb_snapshot_get_ptr(zval *zobject);
+
 void check_rocksdb_db_options(Options &op, HashTable *vht)
 {
     zval *ztmp;
@@ -157,6 +159,10 @@ void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht)
     if (php_rocksdb_array_get_value(vht, "prefix_same_as_start", ztmp))
     {
         rop.prefix_same_as_start = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "snapshot", ztmp))
+    {
+        rop.snapshot = php_rocksdb_snapshot_get_ptr(ztmp);
     }
     if (php_rocksdb_array_get_value(vht, "tailing", ztmp))
     {

@@ -41,7 +41,7 @@ static void php_rocksdb_snapshot_free_object(zend_object *object)
     zend_object_std_dtor(&rocksdb_snapshot->std);
 }
 
-static Snapshot *php_rocksdb_snapshot_get_ptr(zval *zobject)
+Snapshot *php_rocksdb_snapshot_get_ptr(zval *zobject)
 {
     return php_rocksdb_snapshot_fetch_object(Z_OBJ_P(zobject))->snapshot;
 }
