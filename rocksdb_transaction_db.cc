@@ -33,6 +33,9 @@ extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
 extern void check_rocksdb_transaction_db_options(TransactionDBOptions &txn_db_options, HashTable *vht);
 extern void check_rocksdb_transaction_options(TransactionOptions &txn_options, HashTable *vht);
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db__construct, 0, 0, 3)
     ZEND_ARG_INFO(0, dbName)
     ZEND_ARG_INFO(0, options)
@@ -212,12 +215,25 @@ static PHP_METHOD(rocksdb_transaction_db, get)
     RETURN_STRINGL(value.c_str(), value.length());
 }
 
+static PHP_METHOD(rocksdb_transaction_db, close)
+{
+    TransactionDB *txn_db = php_rocksdb_transaction_db_get_ptr(ZEND_THIS);
+    Status s = txn_db->Close();
+
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+    }
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_transaction_db_methods[] =
 {
     PHP_ME(rocksdb_transaction_db, __construct,  arginfo_rocksdb_transaction_db__construct, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, beginTransaction,  arginfo_rocksdb_transaction_db_beginTransaction, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, put,  arginfo_rocksdb_transaction_db_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction_db, get,  arginfo_rocksdb_transaction_db_get, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction_db, close,  arginfo_rocksdb_transaction_db_void, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
