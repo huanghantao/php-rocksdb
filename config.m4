@@ -109,6 +109,7 @@ if test "$PHP_ROCKSDB" != "no"; then
         rocksdb_options.cc \
         rocksdb_transaction_db.cc \
         rocksdb_transaction.cc \
+        rocksdb_snapshot.cc \
         rocksdb_exception.cc \
         rocksdb_iterator.cc \
         rocksdb_write_batch.cc

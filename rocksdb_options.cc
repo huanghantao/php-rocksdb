@@ -92,6 +92,44 @@ void check_rocksdb_transaction_db_options(TransactionDBOptions &txn_db_options, 
     }
 }
 
+void check_rocksdb_transaction_options(TransactionOptions &txn_options, HashTable *vht)
+{
+    zval *ztmp;
+
+    if (php_rocksdb_array_get_value(vht, "deadlock_detect", ztmp))
+    {
+        txn_options.deadlock_detect = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "deadlock_detect_depth", ztmp))
+    {
+        txn_options.deadlock_detect_depth = zval_get_long(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "expiration", ztmp))
+    {
+        txn_options.expiration = zval_get_long(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "lock_timeout", ztmp))
+    {
+        txn_options.lock_timeout = zval_get_long(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "max_write_batch_size", ztmp))
+    {
+        txn_options.max_write_batch_size = zval_get_long(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "set_snapshot", ztmp))
+    {
+        txn_options.set_snapshot = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "skip_concurrency_control", ztmp))
+    {
+        txn_options.skip_concurrency_control = zval_is_true(ztmp);
+    }
+    if (php_rocksdb_array_get_value(vht, "use_only_the_last_commit_time_batch_for_recovery", ztmp))
+    {
+        txn_options.use_only_the_last_commit_time_batch_for_recovery = zval_is_true(ztmp);
+    }
+}
+
 void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht)
 {
     zval *ztmp;

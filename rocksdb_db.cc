@@ -402,6 +402,7 @@ PHP_MINIT_FUNCTION(rocksdb)
     php_rocksdb_write_batch_minit(module_number);
     php_rocksdb_transaction_db_minit(module_number);
     php_rocksdb_transaction_minit(module_number);
+    php_rocksdb_snapshot_minit(module_number);
 
     return SUCCESS;
 }

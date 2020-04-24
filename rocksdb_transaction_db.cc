@@ -31,6 +31,7 @@ extern void check_rocksdb_db_options(Options &op, HashTable *vht);
 extern void check_rocksdb_db_write_options(WriteOptions &wop, HashTable *vht);
 extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
 extern void check_rocksdb_transaction_db_options(TransactionDBOptions &txn_db_options, HashTable *vht);
+extern void check_rocksdb_transaction_options(TransactionOptions &txn_options, HashTable *vht);
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db__construct, 0, 0, 3)
     ZEND_ARG_INFO(0, dbName)
@@ -38,8 +39,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db__construct, 0, 0, 3)
     ZEND_ARG_INFO(0, txnDBOptions)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_beginTransaction, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_beginTransaction, 0, 0, 2)
     ZEND_ARG_INFO(0, writeOptions)
+    ZEND_ARG_INFO(0, txnOptions)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_db_put, 0, 0, 3)
@@ -119,21 +121,28 @@ static PHP_METHOD(rocksdb_transaction_db, __construct)
 static PHP_METHOD(rocksdb_transaction_db, beginTransaction)
 {
     zval *zwriteoptions = nullptr;
+    zval *ztxn_options = nullptr;
 
-    ZEND_PARSE_PARAMETERS_START(0, 1)
+    ZEND_PARSE_PARAMETERS_START(0, 2)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(zwriteoptions)
+        Z_PARAM_ARRAY(ztxn_options)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
     TransactionDB *txn_db = php_rocksdb_transaction_db_get_ptr(ZEND_THIS);
     WriteOptions wop;
+    TransactionOptions txn_options;
 
     if (zwriteoptions)
     {
         check_rocksdb_db_write_options(wop, Z_ARRVAL_P(zwriteoptions));
     }
+    if (ztxn_options)
+    {
+        check_rocksdb_transaction_options(txn_options, Z_ARRVAL_P(ztxn_options));
+    }
 
-    Transaction *txn = txn_db->BeginTransaction(wop);
+    Transaction *txn = txn_db->BeginTransaction(wop, txn_options);
 
     zval ztransaction;
     object_init_ex(&ztransaction, rocksdb_transaction_ce);

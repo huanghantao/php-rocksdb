@@ -25,7 +25,11 @@ typedef struct
 zend_class_entry *rocksdb_transaction_ce;
 static zend_object_handlers rocksdb_transaction_handlers;
 
+extern zend_class_entry *rocksdb_snapshot_ce;
+
 extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
+
+void php_rocksdb_snapshot_set_ptr(zval *zobject, const Snapshot *snapshot);
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_transaction_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -134,11 +138,25 @@ static PHP_METHOD(rocksdb_transaction, commit)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb_transaction, getSnapshot)
+{
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+
+    const Snapshot *snapshot = transaction->GetSnapshot();
+
+    zval zsnapshot;
+    object_init_ex(&zsnapshot, rocksdb_snapshot_ce);
+    php_rocksdb_snapshot_set_ptr(&zsnapshot, snapshot);
+
+    RETVAL_OBJ(Z_OBJ_P(&zsnapshot));
+}
+
 static const zend_function_entry rocksdb_transaction_methods[] =
 {
     PHP_ME(rocksdb_transaction, put, arginfo_rocksdb_transaction_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction, get, arginfo_rocksdb_transaction_get, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction, commit, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction, getSnapshot, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
