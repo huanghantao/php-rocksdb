@@ -163,6 +163,24 @@ static PHP_METHOD(rocksdb_transaction, rollback)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb_transaction, setSnapshot)
+{
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+
+    transaction->SetSnapshot();
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb_transaction, setSavePoint)
+{
+    Transaction *transaction = php_rocksdb_transaction_get_ptr(ZEND_THIS);
+
+    transaction->SetSavePoint();
+
+    RETURN_TRUE;
+}
+
 static const zend_function_entry rocksdb_transaction_methods[] =
 {
     PHP_ME(rocksdb_transaction, put, arginfo_rocksdb_transaction_put, ZEND_ACC_PUBLIC)
@@ -170,6 +188,8 @@ static const zend_function_entry rocksdb_transaction_methods[] =
     PHP_ME(rocksdb_transaction, commit, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction, getSnapshot, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb_transaction, rollback, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction, setSnapshot, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb_transaction, setSavePoint, arginfo_rocksdb_transaction_void, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
