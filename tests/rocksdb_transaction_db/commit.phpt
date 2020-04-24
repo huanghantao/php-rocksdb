@@ -14,7 +14,8 @@ $option = [
     'create_if_missing' => true,
 ];
 
-$db = new RocksDB\TransactionDB('tmp', $option);
+$db = new RocksDB\TransactionDB();
+$db->open('tmp', $option);
 Assert::true($db->put('key', 'value'));
 Assert::eq($db->get('key'), 'value');
 $transaction = $db->beginTransaction([], ['set_snapshot' => true]);

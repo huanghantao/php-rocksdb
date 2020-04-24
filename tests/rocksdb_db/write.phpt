@@ -10,7 +10,8 @@ if (!extension_loaded('rocksdb')) {
 <?php
 require __DIR__ . '/../include/bootstrap.php';
 
-$db = new RocksDB\DB('tmp', ['create_if_missing' => true]);
+$db = new RocksDB\DB();
+$db->open('tmp', ['create_if_missing' => true]);
 
 $batch = new RocksDB\WriteBatch();
 $batch->put('key', 'value');
