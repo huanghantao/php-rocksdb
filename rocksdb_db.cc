@@ -32,10 +32,20 @@ extern void check_rocksdb_db_read_options(ReadOptions &rop, HashTable *vht);
 ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db__construct, 0, 0, 4)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_open, 0, 0, 2)
     ZEND_ARG_INFO(0, dbName)
     ZEND_ARG_INFO(0, options)
-    ZEND_ARG_INFO(0, mode)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_openForReadOnly, 0, 0, 2)
+    ZEND_ARG_INFO(0, dbName)
+    ZEND_ARG_INFO(0, options)
+ZEND_END_ARG_INFO()
+
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_openAsSecondary, 0, 0, 3)
+    ZEND_ARG_INFO(0, dbName)
+    ZEND_ARG_INFO(0, options)
     ZEND_ARG_INFO(0, secondaryPath)
 ZEND_END_ARG_INFO()
 
@@ -108,10 +118,77 @@ PHP_RINIT_FUNCTION(rocksdb)
 
 static PHP_METHOD(rocksdb, __construct)
 {
+}
+
+static PHP_METHOD(rocksdb, open)
+{
     char *path;
     size_t path_len;
     zval *zoptions = nullptr;
-    zend_long mode = 0;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(path, path_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    rocksdb_db_t *rocksdb_db = php_rocksdb_db_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    Options options;
+    options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+
+    if (zoptions)
+    {
+        check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
+    }
+
+    Status s = DB::Open(options, path, &rocksdb_db->db);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb, openForReadOnly)
+{
+    char *path;
+    size_t path_len;
+    zval *zoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(path, path_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    rocksdb_db_t *rocksdb_db = php_rocksdb_db_fetch_object(Z_OBJ_P(ZEND_THIS));
+
+    Options options;
+    options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+
+    if (zoptions)
+    {
+        check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
+    }
+
+    Status s = DB::OpenForReadOnly(options, path, &rocksdb_db->db);
+    if (!s.ok())
+    {
+        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+    }
+
+    RETURN_TRUE;
+}
+
+static PHP_METHOD(rocksdb, openAsSecondary)
+{
+    char *path;
+    size_t path_len;
+    zval *zoptions = nullptr;
     char *secondary_path;
     size_t secondary_path_len;
 
@@ -119,7 +196,6 @@ static PHP_METHOD(rocksdb, __construct)
         Z_PARAM_STRING(path, path_len)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(zoptions)
-        Z_PARAM_LONG(mode)
         Z_PARAM_STRING(secondary_path, secondary_path_len)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
@@ -134,24 +210,13 @@ static PHP_METHOD(rocksdb, __construct)
         check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
-    Status s;
-    if (mode == 0)
-    {
-        s = DB::Open(options, path, &rocksdb_db->db);
-    }
-    else if (mode == 1)
-    {
-        s = DB::OpenForReadOnly(options, path, &rocksdb_db->db);
-    }
-    else
-    {
-        s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_db->db);
-    }
-
+    Status s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_db->db);
     if (!s.ok())
     {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
+
+    RETURN_TRUE;
 }
 
 static PHP_METHOD(rocksdb, put)
@@ -380,7 +445,10 @@ static PHP_METHOD(rocksdb, destroyDB)
 
 static const zend_function_entry rocksdb_methods[] =
 {
-    PHP_ME(rocksdb, __construct, arginfo_rocksdb_db__construct, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, __construct, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, open, arginfo_rocksdb_db_open, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, openForReadOnly, arginfo_rocksdb_db_openForReadOnly, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, openAsSecondary, arginfo_rocksdb_db_openAsSecondary, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, put, arginfo_rocksdb_db_put, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, write, arginfo_rocksdb_db_write, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, get, arginfo_rocksdb_db_get, ZEND_ACC_PUBLIC)
