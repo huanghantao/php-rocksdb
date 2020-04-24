@@ -111,7 +111,7 @@ static PHP_METHOD(rocksdb, __construct)
     char *path;
     size_t path_len;
     zval *zoptions = nullptr;
-    zend_bool mode = 0;
+    zend_long mode = 0;
     char *secondary_path;
     size_t secondary_path_len;
 
@@ -119,7 +119,7 @@ static PHP_METHOD(rocksdb, __construct)
         Z_PARAM_STRING(path, path_len)
         Z_PARAM_OPTIONAL
         Z_PARAM_ARRAY(zoptions)
-        Z_PARAM_BOOL(mode)
+        Z_PARAM_LONG(mode)
         Z_PARAM_STRING(secondary_path, secondary_path_len)
     ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
