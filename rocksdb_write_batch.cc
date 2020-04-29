@@ -48,7 +48,7 @@ static void php_rocksdb_write_batch_free_object(zend_object *object)
 
 static zend_object *php_rocksdb_write_batch_create_object(zend_class_entry *ce)
 {
-    rocksdb_write_batch_t *batch = (rocksdb_write_batch_t *) ecalloc(1, sizeof(rocksdb_write_batch_t) + zend_object_properties_size(ce));
+    rocksdb_write_batch_t *batch = (rocksdb_write_batch_t *) zend_object_alloc(sizeof(rocksdb_write_batch_t), ce);
     zend_object_std_init(&batch->std, ce);
     object_properties_init(&batch->std, ce);
     batch->std.handlers = &rocksdb_write_batch_handlers;

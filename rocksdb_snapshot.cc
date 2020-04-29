@@ -28,7 +28,7 @@ static inline rocksdb_snapshot_t *php_rocksdb_snapshot_fetch_object(zend_object 
 
 static zend_object *php_rocksdb_snapshot_create_object(zend_class_entry *ce)
 {
-    rocksdb_snapshot_t *rocksdb_snapshot = (rocksdb_snapshot_t *) ecalloc(1, sizeof(rocksdb_snapshot_t) + zend_object_properties_size(ce));
+    rocksdb_snapshot_t *rocksdb_snapshot = (rocksdb_snapshot_t *) zend_object_alloc(sizeof(rocksdb_snapshot_t), ce);
     zend_object_std_init(&rocksdb_snapshot->std, ce);
     object_properties_init(&rocksdb_snapshot->std, ce);
     rocksdb_snapshot->std.handlers = &rocksdb_snapshot_handlers;

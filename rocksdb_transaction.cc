@@ -51,7 +51,7 @@ static inline rocksdb_transaction_t *php_rocksdb_transaction_fetch_object(zend_o
 
 static zend_object *php_rocksdb_transaction_create_object(zend_class_entry *ce)
 {
-    rocksdb_transaction_t *rocksdb_transaction = (rocksdb_transaction_t *) ecalloc(1, sizeof(rocksdb_transaction_t) + zend_object_properties_size(ce));
+    rocksdb_transaction_t *rocksdb_transaction = (rocksdb_transaction_t *) zend_object_alloc(sizeof(rocksdb_transaction_t), ce);
     zend_object_std_init(&rocksdb_transaction->std, ce);
     object_properties_init(&rocksdb_transaction->std, ce);
     rocksdb_transaction->std.handlers = &rocksdb_transaction_handlers;

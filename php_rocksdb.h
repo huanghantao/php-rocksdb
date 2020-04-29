@@ -50,6 +50,19 @@ extern zend_class_entry *rocksdb_transaction_ce;
 
 #define ROCKSDB_Z_OBJCE_NAME_VAL_P(zobject) ZSTR_VAL(Z_OBJCE_P(zobject)->name)
 
+#if PHP_VERSION_ID < 70300
+/* Allocates object type and zeros it, but not the properties.
+* Properties MUST be initialized using object_properties_init(). */
+static inline void *zend_object_alloc(size_t obj_size, zend_class_entry *ce)
+{
+    void *obj = emalloc(obj_size + zend_object_properties_size(ce));
+    /* Subtraction of sizeof(zval) is necessary, because zend_object_properties_size() may be
+    * -sizeof(zval), if the object has no properties. */
+    memset(obj, 0, obj_size - sizeof(zval));
+    return obj;
+}
+#endif
+
 /* PHP 7 class declaration macros */
 
 static inline int rocksdb_zend_register_class_alias(const char *name, size_t name_len, zend_class_entry *ce)
