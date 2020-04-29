@@ -8,11 +8,12 @@ if (!extension_loaded('rocksdb')) {
 ?>
 --FILE--
 <?php
+require __DIR__ . '/../include/bootstrap.php';
+
 try {
     throw new RocksDB\Exception("RocksDB exception", 1);
 } catch (RocksDB\Exception $e) {
-    var_dump($e->getMessage());
+    Assert::eq($e->getMessage(), 'RocksDB exception');
 }
 ?>
 --EXPECT--
-string(17) "RocksDB exception"

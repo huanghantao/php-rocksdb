@@ -20,19 +20,17 @@ $db->put('key1', 'value1');
 $db->put('key2', 'value2');
 $db->put('key3', 'value3');
 
+$ret = [];
+
 $iter = $db->newIterator('key1');
+$i = 1;
 foreach ($iter as $key => $value) {
-    var_dump($key);
-    var_dump($value);
+    Assert::eq($key, "key{$i}");
+    Assert::eq($value, "value{$i}");
+    $i++;
 }
 
 Assert::true($db->close());
 Assert::true(RocksDB\DB::destroyDB('tmp'));
 ?>
 --EXPECT--
-string(4) "key1"
-string(6) "value1"
-string(4) "key2"
-string(6) "value2"
-string(4) "key3"
-string(6) "value3"
