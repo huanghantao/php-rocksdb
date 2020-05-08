@@ -28,7 +28,7 @@ modules
 run-tests.php
 tests/*/*.diff
 tests/*/*.out
-tests/*/*.php
+/tests/rocksdb_*/*.php
 tests/*/*.exp
 tests/*/*.log
 tests/*/*.sh
