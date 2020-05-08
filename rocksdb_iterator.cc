@@ -46,6 +46,7 @@ void php_rocksdb_iterator_set_ptr(zval *zobject, Iterator *iter)
 
 static void php_rocksdb_iterator_free_object(zend_object *object)
 {
+    delete php_rocksdb_iterator_fetch_object(object)->iterator;
     zend_object_std_dtor(object);
 }
 

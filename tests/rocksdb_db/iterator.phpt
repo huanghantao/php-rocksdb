@@ -30,6 +30,8 @@ foreach ($iter as $key => $value) {
     $i++;
 }
 
+unset($iter);
+
 Assert::true($db->close());
 Assert::true(RocksDB\DB::destroyDB('tmp'));
 ?>
