@@ -1,5 +1,5 @@
 --TEST--
-{{test_name}}: {{test_intro}}
+rocksdb_db: keyMayExist
 --SKIPIF--
 <?php
 if (!extension_loaded('rocksdb')) {
@@ -19,6 +19,8 @@ $option = [
 $db = new RocksDB\DB($path, $option);
 
 $db->open($path, $option);
+
+Assert::false($db->keyMayExist('nonexistent'));
 
 Assert::true($db->close());
 Assert::true(RocksDB\DB::destroyDB($path));

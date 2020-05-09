@@ -86,6 +86,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_destroyDB, 0, 0, 2)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_rocksdb_db_keyMayExist, 0, 0, 1)
+    ZEND_ARG_INFO(0, key)
+ZEND_END_ARG_INFO()
+
 static inline rocksdb_db_t *php_rocksdb_db_fetch_object(zend_object *obj)
 {
     return (rocksdb_db_t *) ((char *) obj - rocksdb_db_handlers.offset);
@@ -443,6 +447,32 @@ static PHP_METHOD(rocksdb, destroyDB)
     RETURN_TRUE;
 }
 
+static PHP_METHOD(rocksdb, keyMayExist)
+{
+    char *key;
+    size_t key_len;
+    zval *zreadoptions = nullptr;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_STRING(key, key_len)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ARRAY(zreadoptions)
+    ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
+
+    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
+    ReadOptions rop;
+
+    if (zreadoptions)
+    {
+        check_rocksdb_db_read_options(rop, Z_ARRVAL_P(zreadoptions));
+    }
+
+    std::string value;
+    bool isExist = db->KeyMayExist(rop, std::move(std::string(key, key_len)), &value);
+
+    RETVAL_BOOL(isExist);
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
@@ -457,6 +487,7 @@ static const zend_function_entry rocksdb_methods[] =
     PHP_ME(rocksdb, newIterator, arginfo_rocksdb_db_newIterator, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, close, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_db_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    PHP_ME(rocksdb, keyMayExist, arginfo_rocksdb_db_keyMayExist, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
