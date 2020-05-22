@@ -541,9 +541,16 @@ PHP_MINIT_FUNCTION(rocksdb)
 
 PHP_MINFO_FUNCTION(rocksdb)
 {
+    char buf[64];
+
     php_info_print_table_start();
-    php_info_print_table_header(2, "rocksdb support", "enabled");
+    php_info_print_table_header(2, "RocksDB support", "enabled");
+    php_info_print_table_row(2, "Author", "Codinghuang <https://github.com/huanghantao>");
+    php_info_print_table_row(2, "Version", PHP_ROCKSDB_VERSION);
+    snprintf(buf, sizeof(buf), "%s %s", __DATE__, __TIME__);
+    php_info_print_table_row(2, "Built", buf);
     php_info_print_table_end();
+    DISPLAY_INI_ENTRIES();
 }
 
 static const zend_function_entry rocksdb_functions[] = {

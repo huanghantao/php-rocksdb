@@ -1,19 +1,14 @@
 <?php
 
-$option = [
-    'create_if_missing' => true,
-];
+$db = new RocksDB\DB();
 
-$db = new RocksDB('tmp', $option, [], []);
-$db->put('key1', 'value1');
-$db->put('key2', 'value2');
-$db->put('key3', 'value3');
+$path = '/Users/hantaohuang/codeDir/talCode/naming-gateway/rocksdb/service/';
 
-$db->deleteRange('key1', 'key3');
+$db->open($path);
 
-$ret = $db->get('key1');
-var_dump($ret);
-$ret = $db->get('key2');
-var_dump($ret);
-$ret = $db->get('key3');
-var_dump($ret);
+$ret = [];
+
+$iter = $db->newIterator("/e");
+foreach ($iter as $key => $value) {
+    var_dump($key, $value);
+}
