@@ -18,6 +18,7 @@ typedef struct
 {
     DB *db;
     zend_object std;
+    bool isOpen;
 } rocksdb_db_t;
 
 zend_class_entry *rocksdb_db_ce;
@@ -104,6 +105,7 @@ static inline rocksdb_db_t *php_rocksdb_db_fetch_object(zend_object *obj)
 static zend_object *php_rocksdb_db_create_object(zend_class_entry *ce)
 {
     rocksdb_db_t *rocksdb_db = (rocksdb_db_t *) zend_object_alloc(sizeof(rocksdb_db_t), ce);
+    rocksdb_db->isOpen = false;
     zend_object_std_init(&rocksdb_db->std, ce);
     object_properties_init(&rocksdb_db->std, ce);
     rocksdb_db->std.handlers = &rocksdb_db_handlers;
@@ -113,6 +115,16 @@ static zend_object *php_rocksdb_db_create_object(zend_class_entry *ce)
 static void php_rocksdb_db_free_object(zend_object *object)
 {
     rocksdb_db_t *rocksdb_db = (rocksdb_db_t *) php_rocksdb_db_fetch_object(object);
+    if (rocksdb_db->isOpen)
+    {
+        Status s = rocksdb_db->db->Close();
+
+        if (!s.ok())
+        {
+            zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+        }
+        rocksdb_db->isOpen = false;
+    }
     zend_object_std_dtor(&rocksdb_db->std);
 }
 
@@ -158,6 +170,7 @@ static PHP_METHOD(rocksdb, open)
     {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
+    rocksdb_db->isOpen = true;
 
     RETURN_TRUE;
 }
@@ -190,6 +203,8 @@ static PHP_METHOD(rocksdb, openForReadOnly)
     {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
+
+    rocksdb_db->isOpen = true;
 
     RETURN_TRUE;
 }
@@ -225,6 +240,8 @@ static PHP_METHOD(rocksdb, openAsSecondary)
     {
         zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
     }
+
+    rocksdb_db->isOpen = true;
 
     RETURN_TRUE;
 }
@@ -417,13 +434,19 @@ static PHP_METHOD(rocksdb, newIterator)
 
 static PHP_METHOD(rocksdb, close)
 {
-    DB *db = php_rocksdb_db_get_ptr(ZEND_THIS);
-    Status s = db->Close();
+    rocksdb_db_t *rocksdb_db = php_rocksdb_db_fetch_object(Z_OBJ_P(ZEND_THIS));
 
-    if (!s.ok())
+    if (rocksdb_db->isOpen)
     {
-        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+        Status s = rocksdb_db->db->Close();
+
+        if (!s.ok())
+        {
+            zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_CLOSE_ERROR);
+        }
+        rocksdb_db->isOpen = false;
     }
+
     RETURN_TRUE;
 }
 
@@ -505,6 +528,12 @@ static PHP_METHOD(rocksdb, keyExist)
     RETVAL_BOOL(!s.IsNotFound());
 }
 
+static PHP_METHOD(rocksdb, isOpen)
+{
+    rocksdb_db_t *rocksdb_db = php_rocksdb_db_fetch_object(Z_OBJ_P(ZEND_THIS));
+    RETURN_BOOL(rocksdb_db->isOpen);
+}
+
 static const zend_function_entry rocksdb_methods[] =
 {
     PHP_ME(rocksdb, __construct, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
@@ -521,6 +550,7 @@ static const zend_function_entry rocksdb_methods[] =
     PHP_ME(rocksdb, destroyDB, arginfo_rocksdb_db_destroyDB, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     PHP_ME(rocksdb, keyMayExist, arginfo_rocksdb_db_keyMayExist, ZEND_ACC_PUBLIC)
     PHP_ME(rocksdb, keyExist, arginfo_rocksdb_db_keyExist, ZEND_ACC_PUBLIC)
+    PHP_ME(rocksdb, isOpen, arginfo_rocksdb_db_void, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
