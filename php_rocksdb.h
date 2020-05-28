@@ -8,7 +8,7 @@
 #include "zend_exceptions.h"
 #include "zend_interfaces.h"
 
-# define PHP_ROCKSDB_VERSION "0.5.1"
+# define PHP_ROCKSDB_VERSION "0.6.0"
 
 extern zend_module_entry rocksdb_module_entry;
 # define phpext_rocksdb_ptr &rocksdb_module_entry
