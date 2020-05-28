@@ -165,12 +165,15 @@ static PHP_METHOD(rocksdb, open)
         check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
-    Status s = DB::Open(options, path, &rocksdb_db->db);
-    if (!s.ok())
+    if (!rocksdb_db->isOpen)
     {
-        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+        Status s = DB::Open(options, path, &rocksdb_db->db);
+        if (!s.ok())
+        {
+            zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+        }
+        rocksdb_db->isOpen = true;
     }
-    rocksdb_db->isOpen = true;
 
     RETURN_TRUE;
 }
@@ -198,13 +201,16 @@ static PHP_METHOD(rocksdb, openForReadOnly)
         check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
-    Status s = DB::OpenForReadOnly(options, path, &rocksdb_db->db);
-    if (!s.ok())
+    if (!rocksdb_db->isOpen)
     {
-        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
-    }
+        Status s = DB::OpenForReadOnly(options, path, &rocksdb_db->db);
+        if (!s.ok())
+        {
+            zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+        }
 
-    rocksdb_db->isOpen = true;
+        rocksdb_db->isOpen = true;
+    }
 
     RETURN_TRUE;
 }
@@ -235,13 +241,16 @@ static PHP_METHOD(rocksdb, openAsSecondary)
         check_rocksdb_db_options(options, Z_ARRVAL_P(zoptions));
     }
 
-    Status s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_db->db);
-    if (!s.ok())
+    if (!rocksdb_db->isOpen)
     {
-        zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
-    }
+        Status s = DB::OpenAsSecondary(options, path, secondary_path, &rocksdb_db->db);
+        if (!s.ok())
+        {
+            zend_throw_exception(rocksdb_exception_ce, s.ToString().c_str(), ROCKSDB_OPEN_ERROR);
+        }
 
-    rocksdb_db->isOpen = true;
+        rocksdb_db->isOpen = true;
+    }
 
     RETURN_TRUE;
 }
